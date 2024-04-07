@@ -1,0 +1,120 @@
+# Run `docker-compose build` to build an image for api and workers containers.
+# Run `docker-compose up` to run all containers.
+
+name: seshat
+# Seshat was an Egyptian deity of writing, wisdom and knowledge.
+
+services:
+  api:
+    build: .
+    container_name: api
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_SERVER=${POSTGRES_SERVER}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+    restart: on-failure
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./volumes/worker_data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  workers:
+    build: .
+    container_name: workers
+    entrypoint: dramatiq app.worker
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_SERVER=${POSTGRES_SERVER}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+    restart: on-failure
+    volumes:
+      - ./volumes/worker_data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  db:
+    ports:
+      - "5432:5432"
+    image: postgres:alpine
+    container_name: db
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'"]
+      interval: 5s
+      timeout: 20s
+      retries: 3
+    restart: always
+    volumes:
+      - ./volumes/postgres_data:/var/lib/postgresql/data/
+
+  rabbitmq:
+    image: rabbitmq:latest
+    container_name: rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+    restart: on-failure
+    healthcheck:
+      test: [ "CMD", "rabbitmqctl", "status" ]
+      interval: 5s
+      timeout: 20s
+      retries: 3
+    volumes:
+      - ./volumes/rabbitmq_data:/var/lib/rabbitmq
+
+  pytest:
+    profiles: ["pytest"]
+    build: .
+    entrypoint: pytest -v -s
+    container_name: pytest
+    environment:
+      - DEBUG_MODE=${DEBUG_MODE}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_SERVER=${POSTGRES_SERVER}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - UNIT_TESTING=${UNIT_TESTING}
+    volumes:
+      - ./volumes/worker_data:/data
+    depends_on:
+      api:
+        condition: service_started
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      workers:
+        condition: service_started
+
+  loadtest:
+    profiles: ["loadtest"]
+    build: ./loadtest
+    container_name: locust
+    restart: on-failure
+    ports:
+      - "8089:8089"
+    depends_on:
+      api:
+        condition: service_started
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      workers:
+        condition: service_started
