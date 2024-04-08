@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from pathlib import Path
 
@@ -23,6 +24,8 @@ else:
     )
 
 dramatiq.set_broker(broker)
+
+logger = logging.getLogger("seshat-worker")
 
 
 class IDNotFoundError(Exception):
@@ -78,7 +81,7 @@ def render_and_save_pages(document_id: UUID4) -> int:
     num_pages = len(pdf_document)
 
     for page_number in range(1, num_pages + 1):
-        print(f"Processing page {page_number} of document at {document_path}.")
+        logger.info(f"Processing page {page_number} of document at {document_path}.")
         page = pdf_document[page_number - 1]
         pil_image = page.render(
             scale=1,

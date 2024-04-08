@@ -1,4 +1,6 @@
 import uuid
+import logging.config
+import yaml
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -20,6 +22,8 @@ api_description = (
     "\n## Document pages\nYou can get beautifully rendered pages of the documents you uploaded "
     "(you only need to wait seconds for processing)."
 )
+
+logger = logging.getLogger("seshat")
 
 
 @asynccontextmanager
@@ -86,7 +90,7 @@ async def upload_document(pdf_file: UploadFile) -> Response:
 
     storage_filepath = Path(settings.UPLOADS_PATH / f"{str(document.id)}.pdf")
     async with aiofiles.open(storage_filepath, "wb") as f:
-        print(f"Saving file to {storage_filepath}.")
+        logger.info(f"Saving file to {storage_filepath}.")
         while chunk := await pdf_file.read(settings.UPLOAD_CHUNK_SIZE):
             await f.write(chunk)
         render_pdf_document.send(str(document.id))
@@ -228,7 +232,7 @@ async def upload_document_unique(pdf_file: UploadFile) -> Response:
     uploaded_file_uuid = uuid.uuid4
     storage_filepath = Path(settings.UPLOADS_PATH / f"{str(uploaded_file_uuid)}.pdf")
     async with aiofiles.open(storage_filepath, "wb") as f:
-        print(f"Saving file to {storage_filepath}.")
+        logger.info(f"Saving file to {storage_filepath}.")
         while chunk := await pdf_file.read(settings.UPLOAD_CHUNK_SIZE):
             await f.write(chunk)
 
