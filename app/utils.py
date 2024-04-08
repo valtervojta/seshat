@@ -1,6 +1,7 @@
 from hashlib import sha256
 
 
+# noinspection InsecureHash
 def get_file_hash(filepath):
     """
     Hashes a file using SHA256.

@@ -10,7 +10,7 @@ from sqlmodel import Session, select
 
 from app.db import create_db_and_tables, engine
 from app.models import Document, DocumentStatus, DocumentUnique
-from app.settings import PAGES_PATH, UPLOADS_PATH, settings
+from app.settings import settings
 from app.utils import get_file_hash
 from app.worker import render_pdf_document
 
@@ -29,6 +29,8 @@ async def lifespan(_: FastAPI):
     See: https://fastapi.tiangolo.com/advanced/events/
     """
     create_db_and_tables()
+    settings.UPLOADS_PATH.mkdir(parents=True, exist_ok=True)
+    settings.PAGES_PATH.mkdir(parents=True, exist_ok=True)
     yield
 
 
@@ -68,9 +70,6 @@ async def upload_document(pdf_file: UploadFile) -> Response:
     :return: JSON response with document ID that can be later used to look up processing status
     or request rendered pages.
     """
-    UPLOADS_PATH.mkdir(parents=True, exist_ok=True)
-    PAGES_PATH.mkdir(parents=True, exist_ok=True)
-
     # Save the uploaded pdf_file to disk, basic type check
     if pdf_file.content_type != "application/pdf":
         raise HTTPException(
@@ -85,7 +84,7 @@ async def upload_document(pdf_file: UploadFile) -> Response:
         session.commit()
         session.refresh(document)
 
-    storage_filepath = Path(UPLOADS_PATH / f"{str(document.id)}.pdf")
+    storage_filepath = Path(settings.UPLOADS_PATH / f"{str(document.id)}.pdf")
     async with aiofiles.open(storage_filepath, "wb") as f:
         print(f"Saving file to {storage_filepath}.")
         while chunk := await pdf_file.read(settings.UPLOAD_CHUNK_SIZE):
@@ -161,7 +160,7 @@ def get_document_page(document_id: UUID4, page_number: int):
                 detail=f"Page {page_number} does not exist for document {document_id}.",
             )
 
-        image_path = PAGES_PATH / f"{document_id}_{page_number}.png"
+        image_path = settings.PAGES_PATH / f"{document_id}_{page_number}.png"
 
         if image_path.is_file():
             return FileResponse(
@@ -202,7 +201,7 @@ def root():
     tags=["dev"],
     include_in_schema=False,
 )
-async def upload_document(pdf_file: UploadFile) -> Response:
+async def upload_document_unique(pdf_file: UploadFile) -> Response:
     """
     A variant of the POST /documents endpoint that first computes a SHA256 hash of the
     uploaded file and only then creates a database object. This is intended to save space in case of duplicate
@@ -213,20 +212,21 @@ async def upload_document(pdf_file: UploadFile) -> Response:
     Raises HTTPException 415 if the uploaded file does not have content type PDF.
     Does no deeper validation of the uploaded file.
 
+    Could still use the same model with UUID4 as pk if we construed and maintained a set table of file hashes.
+    If we have users and delete endpoint implemented, we should add user id to the hash to avoid one user deleting
+    the only instance of a document / documents pages.
+
     \f
     :param pdf_file: The uploaded PDF file.
     :return: JSON response with document ID that can be later used to look up processing status
     or request rendered pages.
     """
-    UPLOADS_PATH.mkdir(parents=True, exist_ok=True)
-    PAGES_PATH.mkdir(parents=True, exist_ok=True)
 
-    # Save the uploaded pdf_file to disk, basic type check
     if pdf_file.content_type != "application/pdf":
         raise HTTPException(400, detail="Invalid document type.")
 
     uploaded_file_uuid = uuid.uuid4
-    storage_filepath = Path(UPLOADS_PATH / f"{str(uploaded_file_uuid)}.pdf")
+    storage_filepath = Path(settings.UPLOADS_PATH / f"{str(uploaded_file_uuid)}.pdf")
     async with aiofiles.open(storage_filepath, "wb") as f:
         print(f"Saving file to {storage_filepath}.")
         while chunk := await pdf_file.read(settings.UPLOAD_CHUNK_SIZE):

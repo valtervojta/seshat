@@ -12,7 +12,7 @@ from sqlmodel import Session
 
 from app.db import engine
 from app.models import Document, DocumentStatus
-from app.settings import PAGES_PATH, UPLOADS_PATH, settings
+from app.settings import settings
 
 if settings.UNIT_TESTING:
     broker = StubBroker()
@@ -72,7 +72,7 @@ def update_with_error(session: Session, document: Document, error: Exception):
 
 
 def render_and_save_pages(document_id: UUID4) -> int:
-    document_path = Path(UPLOADS_PATH / f"{str(document_id)}.pdf")
+    document_path = Path(settings.UPLOADS_PATH / f"{str(document_id)}.pdf")
     pdf_document = pdfium.PdfDocument(document_path)
 
     num_pages = len(pdf_document)
@@ -101,5 +101,5 @@ def render_and_save_pages(document_id: UUID4) -> int:
             pil_image = pil_image.resize(
                 (new_width, new_height), Image.Resampling.LANCZOS
             )
-        pil_image.save(PAGES_PATH / f"{document_id}_{page_number}.png")
+        pil_image.save(settings.PAGES_PATH / f"{document_id}_{page_number}.png")
     return num_pages
