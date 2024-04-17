@@ -6,8 +6,11 @@ name: seshat
 
 services:
   api:
-    build: .
+    build:
+      context: ./
+      target: api
     container_name: api
+    command: ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000", "--log-config=app/log_conf.yaml"]
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -26,9 +29,11 @@ services:
         condition: service_healthy
 
   workers:
-    build: .
+    build:
+      context: ./
+      target: api
     container_name: workers
-    entrypoint: dramatiq app.worker
+    command: ["dramatiq", "app.worker"]
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -79,8 +84,10 @@ services:
 
   pytest:
     profiles: ["pytest"]
-    build: .
-    entrypoint: pytest -v -s
+    build:
+      context: ./
+      target: dev
+    entrypoint: ["pytest", "-v", "-s"]
     container_name: pytest
     environment:
       - DEBUG_MODE=${DEBUG_MODE}
@@ -104,7 +111,10 @@ services:
 
   loadtest:
     profiles: ["loadtest"]
-    build: ./developer/loadtest
+    build:
+      context: ./
+      target: dev-loadtest
+    command: ["locust", "--host", "http://api:8000", "-f", "loadtest/main.py"]
     container_name: locust
     restart: on-failure
     ports:

@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.10-slim as base
 
 LABEL version="0.9"
 
@@ -7,13 +7,19 @@ RUN apt-get update && apt-get install -y procps && rm -rf /var/lib/apt/lists/*
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+FROM base as api
+
 WORKDIR /code
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY ./app ./app
-
 EXPOSE 8000
 
-CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000", "--log-config=app/log_conf.yaml"]
+FROM api as dev
 
+COPY ./developer/dev-requirements.txt .
+RUN pip install --no-cache-dir -r dev-requirements.txt
+COPY ./developer .
 
+FROM dev as dev-loadtest
+EXPOSE 8089
