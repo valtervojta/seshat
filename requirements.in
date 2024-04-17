@@ -1,0 +1,7 @@
+aiofiles~=23.2.1
+dramatiq[rabbitmq, watch]~=1.16.0
+fastapi~=0.110.1
+pillow~=10.3.0
+pydantic-settings~=2.2.1
+pypdfium2~=4.28.0
+sqlmodel~=0.0.16

@@ -1,6 +1,5 @@
 import uuid
 import logging.config
-import yaml
 from contextlib import asynccontextmanager
 from pathlib import Path
 

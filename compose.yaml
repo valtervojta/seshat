@@ -104,7 +104,7 @@ services:
 
   loadtest:
     profiles: ["loadtest"]
-    build: ./loadtest
+    build: ./developer/loadtest
     container_name: locust
     restart: on-failure
     ports:
