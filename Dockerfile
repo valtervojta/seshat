@@ -20,6 +20,3 @@ FROM api as dev
 COPY ./developer/dev-requirements.txt .
 RUN pip install --no-cache-dir -r dev-requirements.txt
 COPY ./developer .
-
-FROM dev as dev-loadtest
-EXPOSE 8089

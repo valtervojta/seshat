@@ -1,5 +1,6 @@
-# Run `docker-compose build` to build an image for api and workers containers.
-# Run `docker-compose up` to run all containers.
+# Run `docker compose build` to build an image for API and workers containers.
+# Run `docker compose up` to run API, workers, DB and message queue containers.
+# Run `docker compose --profile dev up` to also run pytest and loadtest
 
 name: seshat
 # Seshat was an Egyptian deity of writing, wisdom and knowledge.
@@ -83,7 +84,7 @@ services:
       - ./volumes/rabbitmq_data:/var/lib/rabbitmq
 
   pytest:
-    profiles: ["pytest"]
+    profiles: ["pytest", "dev"]
     build:
       context: ./
       target: dev
@@ -110,10 +111,10 @@ services:
         condition: service_started
 
   loadtest:
-    profiles: ["loadtest"]
+    profiles: ["loadtest", "dev"]
     build:
       context: ./
-      target: dev-loadtest
+      target: dev
     command: ["locust", "--host", "http://api:8000", "-f", "loadtest/main.py"]
     container_name: locust
     restart: on-failure
