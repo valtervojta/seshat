@@ -3,10 +3,10 @@
 # and editing the output manually. All non-dev requirements are also necessary.
 
 # Core packages
-httpx~=0.27.0
-mypy~=1.9.0
-locust~=2.25.0
-pytest~=8.1.1
+httpx==0.27.0
+mypy==1.9.0
+locust==2.25.0
+pytest==8.1.1
 
 # Dependencies
 anyio==4.3.0
